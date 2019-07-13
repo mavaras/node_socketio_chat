@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Simple Group Chat on Node.js</title>
+    <script src="../../socket.io/socket.io.js"></script>
+	<script src="socket.io-stream.js"></script>
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+	<script src="delivery.js"></script>
+
+	<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/shakrmedia/petal@0.11.1/dist/petal.min.css">
+
+  </head>
+  <body>
+	<form id="send">
+	  Select a file: <input id="file" type="file" name="file"><br><br>
+	  <input id="submit" type="submit">
+	</form>
+	<div class="modal" style="position: fixed;
+							  left: 25%; top: 25%;
+							  width: 50%">
+	  <div class="modal-header">
+		<div class="row borders mb-10">
+		<div class="col-3 colspan-2 demo-col-blue">
+		<h3 class="modal-header-text">Chat</h3>
+		<p id="sub" class="sub"></p>
+		</div>
+		<div class="col-3 demo-col-blue">
+		asfd
+		</div>
+		</div>
+	  </div>
+		
+		<div class="modal-body">
+		  <ul id="messages" style="height: 210px; overflow: auto"></ul>
+		</div>
+		<div class="modal-footer btn-row">
+	
+		<form id="chat_input" action="/" method="POST" id="chatForm">
+		  <div class="form-group">
+		  <div class="input-group">
+			<input class="input" id="txt" type="text"/>
+			<span class="input-addon-btn">
+			  <button class="btn green">Send</button>
+			</span>
+			<span class="input-addon-btn" style="border: 1px solid gray;
+												 margin-left: 6px;">
+			  <form>
+				<label for="attach"><i class="petalicon petalicon-file"
+									   style="cursor: pointer;"></i></label>
+				<input id="attach" type="file" name="file" style="opacity: 0;
+																  position: absolute;
+																  z-index: -1;">
+				</input>
+				<input id="submit_attach" type="submit" hidden>
+			  </form>
+			</span>
+		  </div>
+		  </div>
+		</form>
+		</div>
+	</div>
+    
+    <script>
+		document.getElementById("attach").onchange = function() {
+			document.getElementById("submit_attach").click();
+		};
+		
+		var socket = io.connect("http://localhost:8080");
+
+		socket.on("connect", function() {
+			socket.emit("room", "<%= room %>");
+
+			var delivery = new Delivery(socket);
+		
+			delivery.on("delivery.connect", function(delivery) {
+				$("input[type=submit]").click(function(evt) {
+					var file = $("input[id=attach]")[0].files[0];
+					file_ext = file.name.split(".")[1];
+		
+					var extraParams = {foo: "bar"};
+					delivery.send(file, extraParams);
+					evt.preventDefault();
+
+					var curr_user = $("p[id=sub]").text().split(":")[1];
+					var msg = "<strong>"+curr_user+" </strong>(<i>attachment</i>): "+file.name+"  "+
+					"<label for='att"+file.name+"'><i class='petalicon petalicon-download'"+
+					"style='cursor: pointer;'></i></label>"+
+					"<button id='att"+file.name+"' onclick='download_attach(\""+file.name+"\", \"attach."+file_ext+"\")' style='opacity: 0;position: absolute;z-index: -1;'>donwload</button>";
+					$("#messages").append($("<li>").html(msg));
+				});
+			});
+
+			delivery.on("send.success", function(fileUID) {
+				console.log("file was successfully sent.");
+			});
+
+			delivery.on("receive.start", function(fileUID) {
+				 console.log('receiving a file!');
+			});
+
+			delivery.on("receive.success", function(file) {
+				var params = file.params;
+				console.log(file.name);
+			});
+		});
+
+		$("#send_attach").click(function(e) {
+			e.preventDefault(); // prevents page reloading
+			socket.emit("download_attach", $("#txt").val());
+			$("#txt").val("");
+			return false;
+		});
+
+		function download_attach(name, originalFilename) {
+			var stream = ss.createStream(),
+			fileBuffer = [],
+			fileLength = 0;
+
+			//== Emit/Request
+			ss(socket).emit("filedownload", stream, name, function (fileError, fileInfo) {
+				console.log(["File Found!", fileInfo]);
+
+				//== Receive data
+				stream.on('data', function (chunk) {
+					fileLength += chunk.length;
+					fileBuffer.push(chunk);
+				});
+
+				stream.on("end", function () {
+					var filedata = new Uint8Array(fileLength),
+					i = 0;
+
+					// storing file data into array
+					fileBuffer.forEach(function (buff) {
+						for (var j = 0; j < buff.length; j++) {
+							filedata[i] = buff[j];
+							i++;
+						}
+					});
+
+					downloadFileFromBlob([filedata], originalFilename);
+				});
+			});
+		}
+
+		function downloadFileFromBlob(data, fileName) {
+			var a = document.createElement("a");console.log("!!");
+			document.body.appendChild(a);console.log("!!");
+			a.style = "display: none";console.log("!!");
+			//return function (data, fileName) {console.log("!!");
+				var blob = new Blob(data, {
+					type : "octet/stream"
+				}),
+				url = window.URL.createObjectURL(blob);
+				a.href = url;
+				a.download = fileName;
+				a.click();
+				window.URL.revokeObjectURL(url);
+			//};
+		}
+		
+		$("#chat_input").submit(function(e) {
+			e.preventDefault(); // prevents page reloading
+			var msg = $("#txt").val();
+			if (msg != "") {
+				socket.emit("chat_message", msg);
+				$("#txt").val("");
+			}
+			// return false;
+		});
+
+		socket.on("chat_message", function(msg) {
+			$("#messages").append($("<li>").html(msg));
+		});
+
+		socket.on("is_online", function(username) {
+			$("#sub").append("username: "+username);
+			$("#messages").append($("<li>").html("<strong>"+username+"</strong><i> joined the chat...</i>"));
+		});
+
+		socket.on("is_offline", function(username) {console.log(username);
+			$("#messages").append($("<li>").html("<strong>"+username+"</strong><i> has left the chat...</i>"));
+		});
+
+		socket.on("error", function(code) {
+			prompt("Code "+code+" not valid.");
+		});
+
+		var username = prompt("Enter your username");
+		socket.emit("is_online", username);
+    </script>
+  </body>
+</html>

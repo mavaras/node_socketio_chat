@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Simple Group Chat on Node.js</title>
+    <script src="../../socket.io/socket.io.js"></script>
+	<script src="socket.io-stream.js"></script>
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+	<script src="delivery.js"></script>
+
+	<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/shakrmedia/petal@0.11.1/dist/petal.min.css">
+
+  </head>
+  <body>
+	<div class="modal" style="position: fixed;
+							  left: 25%; top: 25%;
+							  width: 50%">
+	  <div class="modal-header">
+		<div class="row borders mb-10">
+		<div class="col-3 colspan-2 demo-col-blue">
+			<h3 class="modal-header-text">Chat</h3>
+			<p id="sub" class="sub"></p>
+		</div><vr>
+		<div class="col-3 demo-col-blue">
+		  <form>
+			<label for="attach"><i class="petalicon petalicon-file"
+								   style="cursor: pointer;"></i></label>
+			<input id="attach" type="file" name="file" style="opacity: 0;
+															  position: absolute;
+															  z-index: -1;">
+			</input>
+			<input id="submit_attach" type="submit" hidden>
+		  </form>
+		</div>
+		</div>
+	  </div>
+		
+		<div class="modal-body">
+		  <ul id="messages" style="height: 210px; overflow: auto"></ul>
+		</div>
+		<div class="modal-footer btn-row">
+	
+		<form id="chat_input" action="/" method="POST" id="chatForm">
+		  <div class="form-group">
+		  <div class="input-group">
+			<input class="input" id="txt" type="text"/>
+			<span class="input-addon-btn">
+			  <button class="btn green">Send</button>
+			</span>
+		  </div>
+		  </div>
+		</form>
+		</div>
+	</div>
+    
+    <script src="front.js"></script>
+  </body>
+</html>
