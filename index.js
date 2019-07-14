@@ -19,7 +19,7 @@ app.use(express.static(path.join(__dirname, "./static")));
 const rooms = ["room1", "room2"];  // temporary here ;)
 
 app.get("/", (req, res) => {
-	res.render("index.ejs",{error: ""});
+	res.render("index.ejs",{error: ""}); 
 });
 
 app.post("/", (req, res) => {
